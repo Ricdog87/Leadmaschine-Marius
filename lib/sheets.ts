@@ -77,14 +77,36 @@ function rowToLead(row: unknown[]): Lead {
   };
 }
 
+// ── tab resolution ────────────────────────────────────────────
+
+/**
+ * Resolve the actual sheet-tab title to use. Prefers the configured
+ * `sheetTab`, but if the spreadsheet doesn't contain a tab by that name
+ * we fall back to the first tab — so a renamed tab never breaks the read.
+ */
+async function resolveTab(sheets: sheets_v4.Sheets): Promise<string> {
+  const tenant = activeTenant();
+  const meta = await sheets.spreadsheets.get({
+    spreadsheetId: tenant.sheetId,
+    fields: "sheets.properties.title",
+  });
+  const titles =
+    meta.data.sheets
+      ?.map((s) => s.properties?.title)
+      .filter((t): t is string => Boolean(t)) ?? [];
+  if (titles.includes(tenant.sheetTab)) return tenant.sheetTab;
+  return titles[0] ?? tenant.sheetTab;
+}
+
 // ── reads ─────────────────────────────────────────────────────
 
 export async function getAllLeads(): Promise<Lead[]> {
   const tenant = activeTenant();
   const sheets = getSheets();
+  const tab = await resolveTab(sheets);
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: tenant.sheetId,
-    range: tenant.range,
+    range: `${tab}!A2:R`,
   });
   const rows = res.data.values ?? [];
   return rows
@@ -100,10 +122,11 @@ export async function updateLeadStatus(
 ): Promise<void> {
   const tenant = activeTenant();
   const sheets = getSheets();
+  const tab = await resolveTab(sheets);
   const needle = domain.trim().toLowerCase();
 
   // 1. Read column D (domains). Data starts at row 2.
-  const domainRange = `${tenant.sheetTab}!${tenant.domainColumn}2:${tenant.domainColumn}`;
+  const domainRange = `${tab}!${tenant.domainColumn}2:${tenant.domainColumn}`;
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: tenant.sheetId,
     range: domainRange,
@@ -124,7 +147,7 @@ export async function updateLeadStatus(
   // 3. Write the new status into column R of that row.
   await sheets.spreadsheets.values.update({
     spreadsheetId: tenant.sheetId,
-    range: `${tenant.sheetTab}!${tenant.statusColumn}${rowIndex}`,
+    range: `${tab}!${tenant.statusColumn}${rowIndex}`,
     valueInputOption: "RAW",
     requestBody: { values: [[status]] },
   });
