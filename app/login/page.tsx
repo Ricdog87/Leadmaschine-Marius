@@ -5,23 +5,12 @@ export const metadata = {
   title: "Anmelden · RSG·AI Sales Intelligence",
 };
 
-async function sendMagicLink(formData: FormData) {
-  "use server";
-  const email = String(formData.get("email") ?? "")
-    .trim()
-    .toLowerCase();
-  if (!email) return;
-  // Sends the magic link via Resend, then redirects to verifyRequest
-  // (/login?sent=1). Non-whitelisted emails are denied in the signIn callback.
-  await signIn("resend", { email, redirectTo: "/sales" });
-}
-
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ sent?: string; error?: string }>;
+  searchParams: Promise<{ error?: string }>;
 }) {
-  const { sent, error } = await searchParams;
+  const { error } = await searchParams;
 
   return (
     <main className="flex min-h-dvh items-center justify-center bg-rsg-bg px-4">
@@ -35,43 +24,35 @@ export default async function LoginPage({
             Sales Intelligence
           </h1>
           <p className="mt-1 text-sm text-rsg-muted">
-            Bitte mit deiner E-Mail anmelden.
+            Bitte mit deinem Google-Konto anmelden.
           </p>
 
-          {sent ? (
-            <div className="mt-6 rounded-lg border border-rsg-accent/30 bg-rsg-accent/10 px-4 py-3 text-sm text-rsg-text">
-              Link gesendet — check deine Mailbox.
+          {error && (
+            <div className="mt-6 rounded-lg border border-rsg-danger/40 bg-rsg-danger/10 px-4 py-3 text-sm text-rsg-danger">
+              Dieses Konto ist nicht freigeschaltet. Bitte wende dich an RSG·AI.
             </div>
-          ) : (
-            <form action={sendMagicLink} className="mt-6 space-y-4">
-              {error && (
-                <div className="rounded-lg border border-rsg-danger/40 bg-rsg-danger/10 px-4 py-3 text-sm text-rsg-danger">
-                  Diese E-Mail ist nicht freigeschaltet. Bitte wende dich an
-                  RSG·AI.
-                </div>
-              )}
-              <div>
-                <label htmlFor="email" className="sr-only">
-                  E-Mail
-                </label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  required
-                  autoComplete="email"
-                  placeholder="du@firma.de"
-                  className="w-full rounded-lg border border-rsg-border bg-rsg-surface2 px-4 py-2.5 text-sm text-rsg-text placeholder:text-rsg-muted2 outline-none transition focus:border-rsg-accent focus:ring-2 focus:ring-rsg-accent/40"
-                />
-              </div>
-              <button
-                type="submit"
-                className="w-full rounded-lg bg-rsg-accent px-4 py-2.5 text-sm font-semibold text-rsg-bg transition hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-rsg-accent/50"
-              >
-                Magic Link senden
-              </button>
-            </form>
           )}
+
+          <form
+            action={async () => {
+              "use server";
+              await signIn("google", { redirectTo: "/sales" });
+            }}
+            className="mt-6"
+          >
+            <button
+              type="submit"
+              className="flex w-full items-center justify-center gap-3 rounded-lg border border-rsg-border bg-rsg-surface2 px-4 py-2.5 text-sm font-semibold text-rsg-text transition hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-rsg-accent/50"
+            >
+              <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+                <path fill="#4285F4" d="M17.64 9.205c0-.639-.057-1.252-.164-1.841H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.614z" />
+                <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.583-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" />
+                <path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.997 8.997 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" />
+                <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" />
+              </svg>
+              Mit Google anmelden
+            </button>
+          </form>
         </div>
 
         <p className="mt-6 text-center font-mono text-[11px] uppercase tracking-[0.18em] text-rsg-muted2">
