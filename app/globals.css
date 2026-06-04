@@ -4,12 +4,29 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ── RSG·AI Brand Tokens ──────────────────────────────────────
+   Generates utilities like bg-rsg-bg, text-rsg-accent, border-rsg-border */
+@theme {
+  --color-rsg-bg: #09090b; /* near-black, body */
+  --color-rsg-surface: #101013; /* cards */
+  --color-rsg-surface2: #15151a; /* raised cards */
+  --color-rsg-border: #222226; /* hairline */
+  --color-rsg-text: #fafafa;
+  --color-rsg-muted: #a1a1aa;
+  --color-rsg-muted2: #71717a;
+  --color-rsg-accent: #66fff0; /* aqua, sparingly */
+  --color-rsg-danger: #f87171; /* HOCH-Prio */
+  --color-rsg-warn: #fbbf24; /* MITTEL */
+  --color-rsg-ok: #34d399; /* NIEDRIG / Gewonnen */
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --font-display: var(--font-display);
   --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-heading: var(--font-display);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -122,9 +139,9 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-rsg-bg text-rsg-text;
   }
   html {
-    @apply font-sans;
+    @apply font-sans antialiased;
   }
 }
