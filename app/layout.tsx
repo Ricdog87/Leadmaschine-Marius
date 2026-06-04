@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Manrope, Inter, JetBrains_Mono } from "next/font/google";
+import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -35,7 +36,10 @@ export default function RootLayout({
       lang="de"
       className={`dark ${manrope.variable} ${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col font-sans">{children}</body>
+      <body className="min-h-full flex flex-col font-sans">
+        {children}
+        <Toaster />
+      </body>
     </html>
   );
 }
