@@ -26,6 +26,31 @@ function useCountUp(target: number, durationMs = 900) {
   return val;
 }
 
+/** Live wall-clock that ticks every second (null until mounted to avoid SSR mismatch). */
+function useNow() {
+  const [now, setNow] = useState<Date | null>(null);
+  useEffect(() => {
+    setNow(new Date());
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return now;
+}
+
+const fmtDate = new Intl.DateTimeFormat("de-DE", {
+  timeZone: "Europe/Berlin",
+  weekday: "short",
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+});
+const fmtTime = new Intl.DateTimeFormat("de-DE", {
+  timeZone: "Europe/Berlin",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+});
+
 function CountValue({ value, eur = false }: { value: number; eur?: boolean }) {
   const v = useCountUp(value);
   const rounded = Math.round(v);
@@ -72,9 +97,10 @@ interface KpiStripProps {
   total: number;
 }
 
-/** Live-leads banner + animated 1x4 KPI strip. */
+/** Live-leads banner (with live clock) + animated 1x4 KPI strip. */
 export function KpiStrip({ kpis, total }: KpiStripProps) {
   const live = useCountUp(total);
+  const now = useNow();
   return (
     <div className="flex flex-col gap-3">
       <div className="kpi-enter relative flex items-center justify-between gap-3 overflow-hidden rounded-xl border border-rsg-accent/25 bg-gradient-to-r from-rsg-surface2 via-rsg-surface to-rsg-surface2 px-4 py-3">
@@ -94,10 +120,18 @@ export function KpiStrip({ kpis, total }: KpiStripProps) {
             Live-Leads im System
           </span>
         </div>
-        <span className="relative hidden items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-rsg-ok sm:inline-flex">
-          <span className="size-1.5 rounded-full bg-rsg-ok" />
-          Echtzeit aus dem Sheet
-        </span>
+        <div className="relative flex items-center gap-3">
+          <span
+            className="font-mono text-xs tabular-nums text-rsg-text"
+            suppressHydrationWarning
+          >
+            {now ? `${fmtDate.format(now)} · ${fmtTime.format(now)}` : "—"}
+          </span>
+          <span className="hidden items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-rsg-ok sm:inline-flex">
+            <span className="size-1.5 animate-pulse rounded-full bg-rsg-ok" />
+            Echtzeit
+          </span>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
