@@ -6,9 +6,9 @@ export const TENANTS = {
   hohrising: {
     name: "hohrising × RSG·AI",
     sheetId: process.env.GOOGLE_SHEET_ID!,
-    sheetTab: "Leads",
-    range: "Leads!A2:R",
-    headerRange: "Leads!A1:R1",
+    sheetTab: "RSG_Staging_Leads",
+    range: "RSG_Staging_Leads!A2:R",
+    headerRange: "RSG_Staging_Leads!A1:R1",
     statusColumn: "R",
     domainColumn: "D",
     allowedEmails: (process.env.ALLOWED_EMAILS ?? "")
