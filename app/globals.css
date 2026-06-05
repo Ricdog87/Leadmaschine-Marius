@@ -145,3 +145,36 @@
     @apply font-sans antialiased;
   }
 }
+/* ── RSG·AI motion utilities (tasteful, meaningful) ───────────── */
+@keyframes rsg-enter {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.kpi-enter  { animation: rsg-enter 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.lead-enter { animation: rsg-enter 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@keyframes rsg-pop {
+  0%   { transform: scale(0.55); opacity: 0.3; }
+  60%  { transform: scale(1.14); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.rsg-pop { animation: rsg-pop 0.35s cubic-bezier(0.22, 1, 0.36, 1); }
+
+@keyframes rsg-sheen-move {
+  0%   { transform: translateX(0) skewX(-12deg); opacity: 0; }
+  15%  { opacity: 1; }
+  100% { transform: translateX(520%) skewX(-12deg); opacity: 0; }
+}
+.rsg-sheen { animation: rsg-sheen-move 2.6s ease-in-out 0.5s 1; }
+
+@keyframes rsg-glow-pulse {
+  0%, 100% { filter: drop-shadow(0 0 2px var(--color-rsg-ok)); }
+  50%      { filter: drop-shadow(0 0 9px var(--color-rsg-ok)); }
+}
+.rsg-glow { animation: rsg-glow-pulse 1.8s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .kpi-enter, .lead-enter, .rsg-pop, .rsg-sheen, .rsg-glow {
+    animation: none !important;
+  }
+}
