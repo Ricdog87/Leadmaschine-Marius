@@ -178,3 +178,25 @@
     animation: none !important;
   }
 }
+
+/* ── CallGoal v2: aurora backdrop + shimmer ───────────────────── */
+@keyframes rsg-aurora-a {
+  0%, 100% { transform: translate(-8%, -6%) scale(1); }
+  50%      { transform: translate(10%, 6%) scale(1.25); }
+}
+@keyframes rsg-aurora-b {
+  0%, 100% { transform: translate(8%, 8%) scale(1.15); }
+  50%      { transform: translate(-8%, -6%) scale(1); }
+}
+.rsg-aurora-a { animation: rsg-aurora-a 15s ease-in-out infinite; }
+.rsg-aurora-b { animation: rsg-aurora-b 19s ease-in-out infinite; }
+
+@keyframes rsg-shimmer {
+  0%   { transform: translateX(-130%); }
+  100% { transform: translateX(340%); }
+}
+.rsg-shimmer { animation: rsg-shimmer 2.2s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .rsg-aurora-a, .rsg-aurora-b, .rsg-shimmer { animation: none !important; }
+}
