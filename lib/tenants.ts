@@ -15,7 +15,7 @@ export const TENANTS = {
       .split(",")
       .map((s) => s.trim().toLowerCase())
       .filter(Boolean),
-    branding: { displayName: "hohrising · Kaffee (DACH)" },
+    branding: { displayName: "hohrising", tagline: "SEO · E-Shop Leads" },
     /** Placeholder pipeline value per "Termin" lead, in EUR. */
     pipelineValuePerTermin: 9999,
   },
