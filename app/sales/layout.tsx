@@ -20,9 +20,14 @@ export default async function SalesLayout({
         <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-4 px-4 py-3 md:px-6">
           <div className="flex items-center gap-4">
             <Wordmark />
-            <span className="hidden font-mono text-[10px] uppercase tracking-[0.16em] text-rsg-muted2 sm:inline">
-              {tenant.branding.displayName}
-            </span>
+            <div className="hidden border-l border-rsg-border pl-4 sm:block">
+              <div className="font-display text-2xl font-medium leading-tight text-rsg-text">
+                {tenant.branding.displayName}
+              </div>
+              <div className="font-mono text-xs uppercase tracking-wider text-rsg-muted">
+                {tenant.branding.tagline}
+              </div>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <span className="hidden text-xs text-rsg-muted sm:inline">
