@@ -1,6 +1,7 @@
 "use client";
 
 import { MapPinIcon, PhoneIcon, StarIcon } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { prioClasses } from "@/lib/lead-utils";
 import { STATUSES, type Lead, type Status } from "@/lib/types";
@@ -43,6 +44,12 @@ function YesNo({ value }: { value: "Ja" | "Nein" }) {
       {yes ? "Ja" : "Nein"}
     </span>
   );
+}
+
+/** Log a call toward the daily goal (CallGoal widget listens for this). */
+function logCall() {
+  window.dispatchEvent(new CustomEvent("rsg:call-logged"));
+  toast.success("Anruf gezählt — +1 aufs Tagesziel");
 }
 
 /** Sticky detail panel for the selected lead. */
@@ -120,6 +127,15 @@ export function LeadDetail({ lead, pending, onStatusChange }: LeadDetailProps) {
             )}
           </div>
         )}
+
+        {/* Log a call toward the daily goal */}
+        <button
+          type="button"
+          onClick={logCall}
+          className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-rsg-accent/40 bg-rsg-accent/10 px-4 py-2.5 font-display text-sm font-semibold text-rsg-accent transition hover:bg-rsg-accent/20 active:scale-[0.98]"
+        >
+          <PhoneIcon className="size-4" /> Anruf geführt
+        </button>
       </div>
 
       {/* Stat cards */}

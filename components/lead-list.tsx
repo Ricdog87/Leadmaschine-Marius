@@ -10,7 +10,6 @@ interface LeadListProps {
   onSelect: (lead: Lead) => void;
 }
 
-/** Coloured dot indicating whether a "Ja/Nein" signal is positive. */
 function Dot({ on, label }: { on: boolean; label: string }) {
   return (
     <span
@@ -45,18 +44,19 @@ export function LeadList({ leads, selectedDomain, onSelect }: LeadListProps) {
 
   return (
     <div className="flex flex-col gap-2 overflow-y-auto pr-1 lg:max-h-[calc(100dvh-13rem)]">
-      {sorted.map((lead) => {
+      {sorted.map((lead, i) => {
         const active = lead.domain === selectedDomain;
         return (
           <button
             key={lead.domain}
             type="button"
             onClick={() => onSelect(lead)}
+            style={{ animationDelay: `${Math.min(i * 35, 350)}ms` }}
             className={cn(
-              "w-full rounded-xl border bg-rsg-surface p-3.5 text-left transition",
+              "lead-enter w-full rounded-xl border bg-rsg-surface p-3.5 text-left transition-all duration-200",
               active
                 ? "border-rsg-accent/60 ring-1 ring-rsg-accent/30"
-                : "border-rsg-border hover:border-rsg-text/20",
+                : "border-rsg-border hover:-translate-y-px hover:border-rsg-accent/30 hover:shadow-[0_0_0_1px_rgba(102,255,240,0.08),0_8px_24px_-16px_rgba(102,255,240,0.55)]",
             )}
           >
             <div className="flex items-start justify-between gap-2">

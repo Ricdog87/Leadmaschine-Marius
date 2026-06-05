@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { extractRegion } from "@/lib/lead-utils";
 import { PRIOS, STATUSES, type Kpis, type Lead, type Status } from "@/lib/types";
+import { CallGoal } from "@/components/call-goal";
 import { KpiStrip } from "@/components/kpi-strip";
 import {
   Filters,
@@ -35,7 +36,6 @@ export function SalesDashboard({ leads, kpis }: SalesDashboardProps) {
   const [selectedDomain, setSelectedDomain] = useState<string | null>(null);
   const [updatingDomain, setUpdatingDomain] = useState<string | null>(null);
 
-  // Read active filters from the URL (comma-separated per key).
   const active = useMemo(() => {
     const out = {} as Record<FilterKey, string[]>;
     for (const key of FILTER_KEYS) {
@@ -45,7 +45,6 @@ export function SalesDashboard({ leads, kpis }: SalesDashboardProps) {
     return out;
   }, [searchParams]);
 
-  // Region is derived from each lead's address.
   const leadsWithRegion = useMemo(
     () => leads.map((l) => ({ lead: l, region: extractRegion(l.adresse) })),
     [leads],
@@ -126,7 +125,6 @@ export function SalesDashboard({ leads, kpis }: SalesDashboardProps) {
         throw new Error(msg);
       }
       toast.success(`Status → ${status}`);
-      // Re-fetch server data so list + KPIs reflect the change.
       startTransition(() => router.refresh());
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Fehler");
@@ -137,7 +135,8 @@ export function SalesDashboard({ leads, kpis }: SalesDashboardProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      <KpiStrip kpis={kpis} />
+      <CallGoal />
+      <KpiStrip kpis={kpis} total={leads.length} />
       <Filters
         groups={groups}
         active={active}
