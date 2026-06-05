@@ -87,6 +87,12 @@ export function SalesDashboard({ leads, kpis }: SalesDashboardProps) {
   const selected =
     leads.find((l) => l.domain === selectedDomain) ?? null;
 
+  // Newest run date present in the data — used to flag fresh leads.
+  const freshDate = useMemo(
+    () => leads.reduce((m, l) => (l.datum > m ? l.datum : m), ""),
+    [leads],
+  );
+
   function setFilterParam(next: Record<FilterKey, string[]>) {
     const params = new URLSearchParams(searchParams.toString());
     for (const key of FILTER_KEYS) {
@@ -147,6 +153,7 @@ export function SalesDashboard({ leads, kpis }: SalesDashboardProps) {
         <LeadList
           leads={filtered}
           selectedDomain={selectedDomain}
+          freshDate={freshDate}
           onSelect={(lead) => setSelectedDomain(lead.domain)}
         />
         <LeadDetail
