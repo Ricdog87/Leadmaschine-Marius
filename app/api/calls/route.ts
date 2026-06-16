@@ -111,13 +111,15 @@ export async function POST(req: Request) {
   if (!me) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   let delta = 1;
+  let reset = false;
   try {
     const body = await req.json();
-    if (typeof body?.delta === "number") delta = body.delta;
+    if (body?.reset === true) reset = true;
+    else if (typeof body?.delta === "number") delta = body.delta;
   } catch {
     /* default +1 */
   }
-  delta = delta >= 0 ? 1 : -1; // only ±1 per request
+  if (!reset) delta = delta >= 0 ? 1 : -1; // only ±1 per request
 
   try {
     const sheets = getSheets();
@@ -137,7 +139,19 @@ export async function POST(req: Request) {
     );
     const now = new Date().toISOString();
 
-    if (offset === -1) {
+    if (reset) {
+      // Reset only the logged-in rep's own row for today to 0.
+      // No matching row -> no-op (never create a row, never touch other reps).
+      if (offset !== -1) {
+        const rowIndex = offset + 2;
+        await sheets.spreadsheets.values.update({
+          spreadsheetId: tenant.sheetId,
+          range: `${CALL_TAB}!C${rowIndex}:D${rowIndex}`,
+          valueInputOption: "RAW",
+          requestBody: { values: [[0, now]] },
+        });
+      }
+    } else if (offset === -1) {
       const start = Math.max(0, delta);
       if (start > 0) {
         await sheets.spreadsheets.values.append({
