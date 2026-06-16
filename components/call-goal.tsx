@@ -201,6 +201,35 @@ export function CallGoal({ goal = DEFAULT_GOAL }: { goal?: number }) {
     [online, me, checkCelebrate, applyStats],
   );
 
+  const reset = useCallback(() => {
+    if (!window.confirm("Heutige Anrufe auf 0 zurücksetzen?")) return;
+    // Let the celebration fire again next time the goal is reached.
+    celebrated.current = false;
+    setReps((prev) => {
+      if (!online) {
+        try {
+          localStorage.setItem(localKey(), "0");
+        } catch {
+          /* ignore */
+        }
+        return [{ email: "", count: 0 }];
+      }
+      const idx = prev.findIndex((r) => r.email === me);
+      if (idx === -1) return prev;
+      return prev.map((r, i) => (i === idx ? { ...r, count: 0 } : r));
+    });
+    if (online) {
+      fetch("/api/calls", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reset: true }),
+      })
+        .then((r) => (r.ok ? r.json() : Promise.reject(new Error("api"))))
+        .then((s: Stats) => applyStats(s))
+        .catch(() => setOnline(false));
+    }
+  }, [online, me, applyStats]);
+
   useEffect(() => {
     const h = () => bump(1);
     window.addEventListener("rsg:call-logged", h);
@@ -383,6 +412,15 @@ export function CallGoal({ goal = DEFAULT_GOAL }: { goal?: number }) {
             className="rounded-lg border border-rsg-border px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider text-rsg-muted2 transition hover:text-rsg-text disabled:cursor-not-allowed disabled:opacity-40"
           >
             −1
+          </button>
+          <button
+            type="button"
+            onClick={reset}
+            disabled={myCount === 0}
+            title="Heutige Anrufe auf 0 setzen"
+            className="rounded-lg px-3 py-1 text-center font-mono text-[10px] uppercase tracking-wider text-rsg-muted2 underline-offset-2 transition hover:text-rsg-text hover:underline disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Reset
           </button>
         </div>
       </div>
