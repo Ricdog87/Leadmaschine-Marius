@@ -42,6 +42,14 @@ export default async function SalesLayout({
                 {session.user.email}
               </span>
             </div>
+            {profile.role === "Admin" && (
+              <a
+                href="/admin"
+                className="hidden items-center rounded-lg border border-rsg-accent/30 bg-rsg-accent/10 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider text-rsg-accent transition hover:bg-rsg-accent/20 sm:inline-flex"
+              >
+                Admin-Übersicht
+              </a>
+            )}
             <form
               action={async () => {
                 "use server";
