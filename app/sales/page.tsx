@@ -1,4 +1,5 @@
 import { getAllLeads, getKpis } from "@/lib/sheets";
+import { tenantUsers } from "@/lib/tenants";
 import { SalesDashboard } from "@/components/sales-dashboard";
 
 // Always render against fresh sheet data (status writes must reflect quickly).
@@ -23,5 +24,5 @@ export default async function SalesPage() {
   }
 
   const kpis = await getKpis(leads);
-  return <SalesDashboard leads={leads} kpis={kpis} />;
+  return <SalesDashboard leads={leads} kpis={kpis} users={tenantUsers()} />;
 }

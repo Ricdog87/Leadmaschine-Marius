@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { extractRegion } from "@/lib/lead-utils";
 import { PRIOS, STATUSES, type Kpis, type Lead, type Status } from "@/lib/types";
+import type { UserProfile } from "@/lib/tenants";
 import { CallGoal } from "@/components/call-goal";
 import { KpiStrip } from "@/components/kpi-strip";
 import {
@@ -18,6 +19,7 @@ import { LeadDetail } from "@/components/lead-detail";
 interface SalesDashboardProps {
   leads: Lead[];
   kpis: Kpis;
+  users: Record<string, UserProfile>;
 }
 
 const FILTER_KEYS: FilterKey[] = [
@@ -35,7 +37,7 @@ function uniqueSorted(values: string[]): string[] {
   );
 }
 
-export function SalesDashboard({ leads, kpis }: SalesDashboardProps) {
+export function SalesDashboard({ leads, kpis, users }: SalesDashboardProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -167,7 +169,7 @@ export function SalesDashboard({ leads, kpis }: SalesDashboardProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      <CallGoal />
+      <CallGoal users={users} />
       <KpiStrip kpis={kpis} total={leads.length} />
       <Filters
         groups={groups}
