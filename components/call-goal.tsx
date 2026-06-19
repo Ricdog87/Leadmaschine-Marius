@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import type { UserProfile } from "@/lib/tenants";
 
 const DEFAULT_GOAL = 15;
 
@@ -46,7 +47,13 @@ function initialsOf(email: string): string {
  * falls back to a per-day localStorage counter so the UI never breaks.
  * Other components can log a call via window event "rsg:call-logged".
  */
-export function CallGoal({ goal = DEFAULT_GOAL }: { goal?: number }) {
+export function CallGoal({
+  goal = DEFAULT_GOAL,
+  users = {},
+}: {
+  goal?: number;
+  users?: Record<string, UserProfile>;
+}) {
   const [reps, setReps] = useState<Rep[]>([]);
   const [me, setMe] = useState<string>("");
   const [goalN, setGoalN] = useState<number>(goal);
@@ -271,6 +278,22 @@ export function CallGoal({ goal = DEFAULT_GOAL }: { goal?: number }) {
     .slice(0, 5);
   const boardMax = Math.max(goalN, ...board.map((b) => b.count), 1);
 
+  // Prefer the configured nickname/role for a rep; fall back to a derived name.
+  const display = (email: string) => {
+    const p = users[email.trim().toLowerCase()];
+    if (p) {
+      const ini =
+        p.short
+          .split(/\s+/)
+          .map((w) => w[0])
+          .join("")
+          .slice(0, 2)
+          .toUpperCase() || p.short.slice(0, 2).toUpperCase();
+      return { name: p.short, role: p.role, ini };
+    }
+    return { name: nameOf(email), role: "", ini: initialsOf(email) };
+  };
+
   return (
     <div className="kpi-enter relative overflow-hidden rounded-2xl border border-rsg-border bg-rsg-surface p-5">
       {/* aurora backdrop */}
@@ -449,11 +472,8 @@ export function CallGoal({ goal = DEFAULT_GOAL }: { goal?: number }) {
           )}
           {board.map((rp, i) => {
             const mine = online ? rp.email === me : true;
-            const label = online
-              ? mine
-                ? "Du"
-                : nameOf(rp.email)
-              : "Du";
+            const info = online && rp.email ? display(rp.email) : null;
+            const label = !online ? "Du" : mine ? "Du" : (info?.name ?? "");
             const reached = rp.count >= goalN;
             return (
               <div
@@ -474,15 +494,20 @@ export function CallGoal({ goal = DEFAULT_GOAL }: { goal?: number }) {
                       : "bg-rsg-border text-rsg-muted",
                   )}
                 >
-                  {online && rp.email ? initialsOf(rp.email) : "DU"}
+                  {info ? info.ini : "DU"}
                 </span>
                 <span
                   className={cn(
-                    "w-28 shrink-0 truncate text-sm font-medium",
+                    "flex w-32 shrink-0 items-center gap-1.5 truncate text-sm font-medium",
                     mine ? "text-rsg-text" : "text-rsg-muted",
                   )}
                 >
                   {label}
+                  {info?.role && (
+                    <span className="rounded-full border border-rsg-border px-1.5 py-px font-mono text-[8px] uppercase tracking-wider text-rsg-muted2">
+                      {info.role}
+                    </span>
+                  )}
                 </span>
                 <div className="h-2 flex-1 overflow-hidden rounded-full bg-rsg-border/50">
                   <div

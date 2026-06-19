@@ -54,6 +54,14 @@ function str(value: unknown): string {
   return String(value ?? "").trim();
 }
 
+function toAkquiseForm(value: unknown): Lead["akquise_form"] {
+  const v = str(value).toLowerCase();
+  if (v.startsWith("anruf") || v === "call" || v === "telefon") return "Anruf";
+  if (v.startsWith("e-mail") || v.startsWith("email") || v === "mail")
+    return "E-Mail";
+  return "";
+}
+
 function rowToLead(row: unknown[]): Lead {
   return {
     datum: str(row[0]), // A
@@ -74,6 +82,12 @@ function rowToLead(row: unknown[]): Lead {
     sales_pitch: str(row[15]), // P
     lead_prio: toPrio(row[16]), // Q
     status: toStatus(row[17]), // R
+    marge_klasse: str(row[18]), // S
+    akquise_form: toAkquiseForm(row[19]), // T
+    branche_kategorie: str(row[20]), // U
+    welle: str(row[21]).toUpperCase(), // V
+    akquise_status: str(row[22]).toUpperCase(), // W
+    pipeline_potenzial: toNumber(row[23]), // X
   };
 }
 
@@ -106,7 +120,7 @@ export async function getAllLeads(): Promise<Lead[]> {
   const tab = await resolveTab(sheets);
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: tenant.sheetId,
-    range: `${tab}!A2:R`,
+    range: `${tab}!A2:X`,
   });
   const rows = res.data.values ?? [];
   return rows
@@ -171,12 +185,18 @@ function isToday(datum: string): boolean {
 
 export async function getKpis(leads: Lead[]): Promise<Kpis> {
   const tenant = activeTenant();
-  const termine = leads.filter((l) => l.status === "Termin").length;
+  const terminLeads = leads.filter((l) => l.status === "Termin");
+  // Pipeline value = sum of each open Termin's real pipeline_potenzial from the
+  // sheet (column X); fall back to the placeholder per-Termin where missing.
+  const pipeline_value_eur = terminLeads.reduce(
+    (sum, l) => sum + (l.pipeline_potenzial || tenant.pipelineValuePerTermin),
+    0,
+  );
   return {
     today_new: leads.filter((l) => isToday(l.datum)).length,
     hoch_open: leads.filter((l) => l.lead_prio === "HOCH" && l.status === "Neu")
       .length,
-    termine,
-    pipeline_value_eur: termine * tenant.pipelineValuePerTermin,
+    termine: terminLeads.length,
+    pipeline_value_eur,
   };
 }

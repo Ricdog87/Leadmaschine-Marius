@@ -1,9 +1,9 @@
 "use client";
 
-import { MapPinIcon, PhoneIcon, StarIcon } from "lucide-react";
+import { MailIcon, MapPinIcon, PhoneIcon, StarIcon } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { prioClasses } from "@/lib/lead-utils";
+import { formatEur, prioClasses } from "@/lib/lead-utils";
 import { STATUSES, type Lead, type Status } from "@/lib/types";
 import { ScoreRing } from "@/components/score-ring";
 import { PitchCard } from "@/components/pitch-card";
@@ -123,6 +123,52 @@ export function LeadDetail({ lead, pending, onStatusChange }: LeadDetailProps) {
             {lead.shop_system && (
               <span className="rounded-md border border-rsg-border bg-rsg-surface2 px-2 py-0.5 text-xs text-rsg-muted">
                 {lead.shop_system}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Strategy fields from the sheet (columns S–X) */}
+        {(lead.welle ||
+          lead.marge_klasse ||
+          lead.akquise_form ||
+          lead.akquise_status) && (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {lead.akquise_form && (
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium",
+                  lead.akquise_form === "Anruf"
+                    ? "border-rsg-accent/40 bg-rsg-accent/10 text-rsg-accent"
+                    : "border-rsg-warn/40 bg-rsg-warn/10 text-rsg-warn",
+                )}
+              >
+                {lead.akquise_form === "Anruf" ? (
+                  <PhoneIcon className="size-3" />
+                ) : (
+                  <MailIcon className="size-3" />
+                )}
+                {lead.akquise_form}
+              </span>
+            )}
+            {lead.welle && (
+              <span className="rounded-md border border-rsg-border bg-rsg-surface2 px-2 py-0.5 text-xs text-rsg-muted">
+                Welle {lead.welle}
+              </span>
+            )}
+            {lead.marge_klasse && (
+              <span className="rounded-md border border-rsg-border bg-rsg-surface2 px-2 py-0.5 text-xs text-rsg-muted">
+                {lead.marge_klasse}
+              </span>
+            )}
+            {lead.akquise_status && lead.akquise_status !== "AKTIV" && (
+              <span className="rounded-md border border-rsg-border bg-rsg-surface2 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-rsg-muted2">
+                {lead.akquise_status}
+              </span>
+            )}
+            {lead.pipeline_potenzial > 0 && (
+              <span className="ml-auto rounded-md border border-rsg-ok/30 bg-rsg-ok/10 px-2 py-0.5 text-xs font-semibold text-rsg-ok">
+                ≈ {formatEur(lead.pipeline_potenzial)} Potenzial
               </span>
             )}
           </div>

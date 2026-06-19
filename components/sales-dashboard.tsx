@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { extractRegion } from "@/lib/lead-utils";
 import { PRIOS, STATUSES, type Kpis, type Lead, type Status } from "@/lib/types";
+import type { UserProfile } from "@/lib/tenants";
 import { CallGoal } from "@/components/call-goal";
 import { KpiStrip } from "@/components/kpi-strip";
 import {
@@ -18,9 +19,17 @@ import { LeadDetail } from "@/components/lead-detail";
 interface SalesDashboardProps {
   leads: Lead[];
   kpis: Kpis;
+  users: Record<string, UserProfile>;
 }
 
-const FILTER_KEYS: FilterKey[] = ["branche", "region", "prio", "status"];
+const FILTER_KEYS: FilterKey[] = [
+  "branche",
+  "region",
+  "welle",
+  "akquiseform",
+  "prio",
+  "status",
+];
 
 function uniqueSorted(values: string[]): string[] {
   return Array.from(new Set(values.filter(Boolean))).sort((a, b) =>
@@ -28,7 +37,7 @@ function uniqueSorted(values: string[]): string[] {
   );
 }
 
-export function SalesDashboard({ leads, kpis }: SalesDashboardProps) {
+export function SalesDashboard({ leads, kpis, users }: SalesDashboardProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -62,6 +71,16 @@ export function SalesDashboard({ leads, kpis }: SalesDashboardProps) {
         label: "Region",
         options: uniqueSorted(leadsWithRegion.map((l) => l.region)),
       },
+      {
+        key: "welle",
+        label: "Welle",
+        options: uniqueSorted(leads.map((l) => l.welle)),
+      },
+      {
+        key: "akquiseform",
+        label: "Akquise",
+        options: uniqueSorted(leads.map((l) => l.akquise_form)),
+      },
       { key: "prio", label: "Prio", options: [...PRIOS] },
       { key: "status", label: "Status", options: [...STATUSES] },
     ],
@@ -74,6 +93,13 @@ export function SalesDashboard({ leads, kpis }: SalesDashboardProps) {
         if (active.branche.length && !active.branche.includes(lead.branche))
           return false;
         if (active.region.length && !active.region.includes(region))
+          return false;
+        if (active.welle.length && !active.welle.includes(lead.welle))
+          return false;
+        if (
+          active.akquiseform.length &&
+          !active.akquiseform.includes(lead.akquise_form)
+        )
           return false;
         if (active.prio.length && !active.prio.includes(lead.lead_prio))
           return false;
@@ -112,7 +138,9 @@ export function SalesDashboard({ leads, kpis }: SalesDashboardProps) {
   }
 
   function clearFilters() {
-    setFilterParam({ branche: [], region: [], prio: [], status: [] });
+    const empty = {} as Record<FilterKey, string[]>;
+    for (const key of FILTER_KEYS) empty[key] = [];
+    setFilterParam(empty);
   }
 
   async function changeStatus(lead: Lead, status: Status) {
@@ -141,7 +169,7 @@ export function SalesDashboard({ leads, kpis }: SalesDashboardProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      <CallGoal />
+      <CallGoal users={users} />
       <KpiStrip kpis={kpis} total={leads.length} />
       <Filters
         groups={groups}

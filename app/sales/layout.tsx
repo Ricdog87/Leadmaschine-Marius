@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { LogOutIcon } from "lucide-react";
 import { auth, signOut } from "@/auth";
 import { Wordmark } from "@/components/wordmark";
-import { activeTenant } from "@/lib/tenants";
+import { activeTenant, getUserProfile } from "@/lib/tenants";
 
 export default async function SalesLayout({
   children,
@@ -13,6 +13,7 @@ export default async function SalesLayout({
   if (!session?.user) redirect("/login");
 
   const tenant = activeTenant();
+  const profile = getUserProfile(session.user.email);
 
   return (
     <div className="min-h-dvh bg-rsg-bg">
@@ -30,9 +31,17 @@ export default async function SalesLayout({
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <span className="hidden text-xs text-rsg-muted sm:inline">
-              {session.user.email}
-            </span>
+            <div className="hidden flex-col items-end leading-tight sm:flex">
+              <span className="flex items-center gap-1.5 text-sm font-medium text-rsg-text">
+                {profile.nickname}
+                <span className="rounded-full border border-rsg-accent/30 bg-rsg-accent/10 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-rsg-accent">
+                  {profile.role}
+                </span>
+              </span>
+              <span className="font-mono text-[10px] text-rsg-muted2">
+                {session.user.email}
+              </span>
+            </div>
             <form
               action={async () => {
                 "use server";
