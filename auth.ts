@@ -22,8 +22,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       const allowed = activeTenant().allowedEmails.map((e) => e.toLowerCase());
       return allowed.includes((user.email ?? "").toLowerCase());
     },
+    // Land on the app root; app/page.tsx then routes by role (Admin -> /admin).
     redirect({ baseUrl }) {
-      return `${baseUrl}/sales`;
+      return baseUrl;
     },
   },
 });
