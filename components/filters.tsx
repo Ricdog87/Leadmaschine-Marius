@@ -2,7 +2,13 @@
 
 import { cn } from "@/lib/utils";
 
-export type FilterKey = "branche" | "region" | "prio" | "status";
+export type FilterKey =
+  | "branche"
+  | "region"
+  | "welle"
+  | "akquiseform"
+  | "prio"
+  | "status";
 
 export interface FilterGroup {
   key: FilterKey;

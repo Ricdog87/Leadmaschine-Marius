@@ -21,7 +21,10 @@ export const PRIOS: Prio[] = ["HOCH", "MITTEL", "NIEDRIG"];
 
 export type JaNein = "Ja" | "Nein";
 
-/** Lead row — columns A–R exactly as ordered in the source sheet. */
+/** Acquisition channel for a lead (sheet column T). */
+export type AkquiseForm = "Anruf" | "E-Mail" | "";
+
+/** Lead row — columns A–X as ordered in the RSG_Staging_Leads sheet tab. */
 export interface Lead {
   datum: string; // A
   firma: string; // B
@@ -41,11 +44,19 @@ export interface Lead {
   sales_pitch: string; // P  (renamed from "hook")
   lead_prio: Prio; // Q
   status: Status; // R
+  // ── Strategy fields (columns S–X), added from the live sheet ──
+  marge_klasse: string; // S  e.g. "Premium"
+  akquise_form: AkquiseForm; // T  "Anruf" | "E-Mail"
+  branche_kategorie: string; // U  e.g. "Outdoor"
+  welle: string; // V  e.g. "W1" | "W2" | "W3"
+  akquise_status: string; // W  e.g. "ARCHIV" | "AKTIV" | "PIPELINE"
+  pipeline_potenzial: number; // X  estimated contract value in EUR
 }
 
 export interface Kpis {
   today_new: number;
   hoch_open: number;
   termine: number;
-  pipeline_value_eur: number; // Termine × 9.999 (placeholder)
+  /** Sum of pipeline_potenzial across open "Termin" leads (real sheet value). */
+  pipeline_value_eur: number;
 }
