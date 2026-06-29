@@ -455,8 +455,8 @@ export default async function AdminPage() {
 
         {/* weekly per-user report */}
         <Section
-          title="Diese Woche \u00b7 je Person"
-          hint={`${fmtDay(week.weekStart)}\u2013${fmtDay(week.today)} \u00b7 Login \u00b7 Anrufe \u00b7 Leads bewegt`}
+          title="Diese Woche · je Person"
+          hint={`${fmtDay(week.weekStart)}–${fmtDay(week.today)} · Login · Anrufe · Leads bewegt`}
         >
           <div className="flex items-center gap-3 border-b border-rsg-border pb-2 font-mono text-[10px] uppercase tracking-[0.16em] text-rsg-muted2">
             <span className="w-28 shrink-0">Person</span>
