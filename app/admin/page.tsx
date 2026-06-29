@@ -456,7 +456,7 @@ export default async function AdminPage() {
         {/* weekly per-user report */}
         <Section
           title="Diese Woche · je Person"
-          hint={`${fmtDay(week.weekStart)}–${fmtDay(week.today)} · Login · Anrufe · Leads bewegt`}
+          hint={`Anrufe & Leads: Vorwoche (${fmtDay(week.prevWeekStart)}–${fmtDay(week.prevWeekEnd)}) → diese Woche (${fmtDay(week.weekStart)}–${fmtDay(week.today)})`}
         >
           <div className="flex items-center gap-3 border-b border-rsg-border pb-2 font-mono text-[10px] uppercase tracking-[0.16em] text-rsg-muted2">
             <span className="w-28 shrink-0">Person</span>
@@ -475,6 +475,16 @@ export default async function AdminPage() {
                   minute: "2-digit",
                 }).format(new Date(s.lastLogin))
               : "\u2014";
+            const callsNow = s?.callsWeek ?? 0;
+            const callsPrev = s?.callsPrevWeek ?? 0;
+            const leadsNow = s?.leadsWorkedWeek ?? 0;
+            const leadsPrev = s?.leadsWorkedPrevWeek ?? 0;
+            const toneCls = (now: number, prev: number) =>
+              now > prev
+                ? "text-rsg-ok"
+                : now < prev
+                  ? "text-rsg-danger"
+                  : "text-rsg-text";
             return (
               <div key={email} className="flex items-center gap-3 text-sm">
                 <span className="flex w-28 shrink-0 items-center gap-1.5 truncate font-medium text-rsg-text">
@@ -489,11 +499,13 @@ export default async function AdminPage() {
                 <span className="flex-1 text-right font-mono tabular-nums text-rsg-text">
                   {s?.activeDays ?? 0}
                 </span>
-                <span className="flex-1 text-right font-mono tabular-nums text-rsg-text">
-                  {s?.callsWeek ?? 0}
+                <span className="flex-1 text-right font-mono text-sm tabular-nums">
+                  <span className="text-rsg-muted2">{callsPrev} → </span>
+                  <span className={toneCls(callsNow, callsPrev)}>{callsNow}</span>
                 </span>
-                <span className="flex-1 text-right font-mono tabular-nums text-rsg-text">
-                  {s?.leadsWorkedWeek ?? 0}
+                <span className="flex-1 text-right font-mono text-sm tabular-nums">
+                  <span className="text-rsg-muted2">{leadsPrev} → </span>
+                  <span className={toneCls(leadsNow, leadsPrev)}>{leadsNow}</span>
                 </span>
               </div>
             );
