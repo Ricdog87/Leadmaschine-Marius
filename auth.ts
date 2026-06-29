@@ -1,6 +1,7 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 import { activeTenant } from "@/lib/tenants";
+import { logLogin } from "@/lib/tracking";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   // Trust the deployment host (Vercel sets the URL; local dev needs this too).
@@ -25,6 +26,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     // Land on the app root; app/page.tsx then routes by role (Admin -> /admin).
     redirect({ baseUrl }) {
       return baseUrl;
+    },
+  },
+  events: {
+    // Audit log: record every successful sign-in (LoginLog tab).
+    async signIn({ user }) {
+      await logLogin(user.email);
     },
   },
 });

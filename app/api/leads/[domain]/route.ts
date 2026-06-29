@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/auth";
 import { updateLeadStatus } from "@/lib/sheets";
+import { logActivity } from "@/lib/tracking";
 import { STATUSES, type Status } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -36,7 +37,10 @@ export async function PATCH(
   }
 
   try {
-    await updateLeadStatus(decodeURIComponent(domain), status);
+    const dom = decodeURIComponent(domain);
+    await updateLeadStatus(dom, status);
+    // Activity audit log (who moved which lead, when) — best-effort.
+    await logActivity(session.user.email, dom, status);
     return NextResponse.json({ ok: true });
   } catch (err) {
     const code = (err as { status?: number }).status === 404 ? 404 : 500;

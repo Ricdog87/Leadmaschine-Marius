@@ -8,6 +8,7 @@ import { getAllLeads } from "@/lib/sheets";
 import { activeTenant, getUserProfile, tenantUsers } from "@/lib/tenants";
 import { formatEur, extractRegion } from "@/lib/lead-utils";
 import { STATUSES, type Lead, type Status } from "@/lib/types";
+import { getWeeklyStats } from "@/lib/tracking";
 
 // Admin overview must always reflect live sheet data.
 export const dynamic = "force-dynamic";
@@ -279,6 +280,7 @@ export default async function AdminPage() {
 
   const users = tenantUsers();
   const calls = await readCallsToday();
+  const week = await getWeeklyStats();
 
   // ── aggregations ──
   const total = leads.length;
@@ -372,7 +374,7 @@ export default async function AdminPage() {
 
         {/* funnel + timeline */}
         <div className="grid gap-4 lg:grid-cols-2">
-          <Section title="Status & Funnel" hint={`Conversion ${pctOf(won, total)}% · ${formatEur(wonValue)} gewonnen}`>
+          <Section title="Status & Funnel" hint={`Conversion ${pctOf(won, total)}% · ${formatEur(wonValue)} gewonnen`}>
             {byStatus.map(({ status, count }) => (
               <Bar
                 key={status}
@@ -449,6 +451,53 @@ export default async function AdminPage() {
               right={`${r.count}/${CALL_GOAL}`}
             />
           ))}
+        </Section>
+
+        {/* weekly per-user report */}
+        <Section
+          title="Diese Woche · je Person"
+          hint={`${fmtDay(week.weekStart)}–${fmtDay(week.today)} · Login · Anrufe · Leads bewegt`}
+        >
+          <div className="flex items-center gap-3 border-b border-rsg-border pb-2 font-mono text-[10px] uppercase tracking-[0.16em] text-rsg-muted2">
+            <span className="w-28 shrink-0">Person</span>
+            <span className="w-32 shrink-0">Letzter Login</span>
+            <span className="flex-1 text-right">Aktive Tage</span>
+            <span className="flex-1 text-right">Anrufe</span>
+            <span className="flex-1 text-right">Leads bewegt</span>
+          </div>
+          {Object.entries(users).map(([email, profile]) => {
+            const s = week.byUser[email];
+            const last = s?.lastLogin
+              ? new Intl.DateTimeFormat("de-DE", {
+                  timeZone: "Europe/Berlin",
+                  weekday: "short",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }).format(new Date(s.lastLogin))
+              : "\u2014";
+            return (
+              <div key={email} className="flex items-center gap-3 text-sm">
+                <span className="flex w-28 shrink-0 items-center gap-1.5 truncate font-medium text-rsg-text">
+                  {profile.short}
+                  <span className="rounded-full border border-rsg-border px-1.5 py-px font-mono text-[8px] uppercase tracking-wider text-rsg-muted2">
+                    {profile.role}
+                  </span>
+                </span>
+                <span className="w-32 shrink-0 font-mono text-xs text-rsg-muted">
+                  {last}
+                </span>
+                <span className="flex-1 text-right font-mono tabular-nums text-rsg-text">
+                  {s?.activeDays ?? 0}
+                </span>
+                <span className="flex-1 text-right font-mono tabular-nums text-rsg-text">
+                  {s?.callsWeek ?? 0}
+                </span>
+                <span className="flex-1 text-right font-mono tabular-nums text-rsg-text">
+                  {s?.leadsWorkedWeek ?? 0}
+                </span>
+              </div>
+            );
+          })}
         </Section>
       </main>
     </div>
