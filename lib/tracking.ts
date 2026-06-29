@@ -35,6 +35,16 @@ function weekStartYMD(): string {
   return dt.toISOString().slice(0, 10);
 }
 
+/** Previous full week (Mon..Sun) immediately before the given week-start Monday. */
+function prevWeekRange(weekStart: string): { start: string; end: string } {
+  const [y, m, d] = weekStart.split("-").map(Number);
+  const end = new Date(Date.UTC(y, m - 1, d, 12));
+  end.setUTCDate(end.getUTCDate() - 1); // Sunday before this Monday
+  const start = new Date(Date.UTC(y, m - 1, d, 12));
+  start.setUTCDate(start.getUTCDate() - 7); // previous Monday
+  return { start: start.toISOString().slice(0, 10), end: end.toISOString().slice(0, 10) };
+}
+
 async function ensureTab(
   sheets: sheets_v4.Sheets,
   spreadsheetId: string,
@@ -120,6 +130,10 @@ export interface UserWeekStats {
   callsWeek: number;
   leadsWorkedWeek: number; // distinct leads moved
   statusChangesWeek: number;
+  // previous full week (Mon..Sun before the current week) — week-over-week comparison
+  callsPrevWeek: number;
+  leadsWorkedPrevWeek: number;
+  statusChangesPrevWeek: number;
 }
 
 async function readRange(
@@ -139,11 +153,15 @@ async function readRange(
 export async function getWeeklyStats(): Promise<{
   weekStart: string;
   today: string;
+  prevWeekStart: string;
+  prevWeekEnd: string;
   byUser: Record<string, UserWeekStats>;
 }> {
   const today = berlinYMD();
   const weekStart = weekStartYMD();
+  const prev = prevWeekRange(weekStart);
   const inWeek = (ymd: string) => ymd >= weekStart && ymd <= today;
+  const inPrevWeek = (ymd: string) => ymd >= prev.start && ymd <= prev.end;
   const byUser: Record<string, UserWeekStats> = {};
   const ensure = (e: string): UserWeekStats =>
     (byUser[e] ??= {
@@ -153,6 +171,9 @@ export async function getWeeklyStats(): Promise<{
       callsWeek: 0,
       leadsWorkedWeek: 0,
       statusChangesWeek: 0,
+      callsPrevWeek: 0,
+      leadsWorkedPrevWeek: 0,
+      statusChangesPrevWeek: 0,
     });
 
   try {
@@ -185,20 +206,28 @@ export async function getWeeklyStats(): Promise<{
 
     // ActivityLog: [timestamp, email, domain, status]
     const weekDomains: Record<string, Set<string>> = {};
+    const prevWeekDomains: Record<string, Set<string>> = {};
     for (const r of activity) {
       const ts = String(r[0] ?? "");
       const e = String(r[1] ?? "").trim().toLowerCase();
       const domain = String(r[2] ?? "").trim().toLowerCase();
       if (!e || !ts) continue;
       const ymd = ts.slice(0, 10);
-      if (!inWeek(ymd)) continue;
-      const u = ensure(e);
-      u.statusChangesWeek += 1;
-      markActive(e, ymd);
-      if (domain) (weekDomains[e] ??= new Set()).add(domain);
+      if (inWeek(ymd)) {
+        const u = ensure(e);
+        u.statusChangesWeek += 1;
+        markActive(e, ymd);
+        if (domain) (weekDomains[e] ??= new Set()).add(domain);
+      } else if (inPrevWeek(ymd)) {
+        ensure(e).statusChangesPrevWeek += 1;
+        if (domain) (prevWeekDomains[e] ??= new Set()).add(domain);
+      }
     }
     for (const [e, set] of Object.entries(weekDomains)) {
       ensure(e).leadsWorkedWeek = set.size;
+    }
+    for (const [e, set] of Object.entries(prevWeekDomains)) {
+      ensure(e).leadsWorkedPrevWeek = set.size;
     }
 
     // CallLog: [datum(YYYY-MM-DD), rep, count, updated_at]
@@ -206,10 +235,14 @@ export async function getWeeklyStats(): Promise<{
       const ymd = String(r[0] ?? "").trim();
       const e = String(r[1] ?? "").trim().toLowerCase();
       const count = Math.max(0, parseInt(String(r[2] ?? "0"), 10) || 0);
-      if (!e || !ymd || !inWeek(ymd)) continue;
-      const u = ensure(e);
-      u.callsWeek += count;
-      if (count > 0) markActive(e, ymd);
+      if (!e || !ymd) continue;
+      if (inWeek(ymd)) {
+        const u = ensure(e);
+        u.callsWeek += count;
+        if (count > 0) markActive(e, ymd);
+      } else if (inPrevWeek(ymd)) {
+        ensure(e).callsPrevWeek += count;
+      }
     }
 
     for (const [e, set] of Object.entries(activeDates)) {
@@ -219,5 +252,11 @@ export async function getWeeklyStats(): Promise<{
     /* return whatever we have */
   }
 
-  return { weekStart, today, byUser };
+  return {
+    weekStart,
+    today,
+    prevWeekStart: prev.start,
+    prevWeekEnd: prev.end,
+    byUser,
+  };
 }
