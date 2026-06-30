@@ -56,6 +56,39 @@ export function extractRegion(adresse: string): string {
   return tail.replace(/\b\d{4,5}\b/g, "").trim();
 }
 
+/** City / Ort from a German address (segment carrying the postal code). */
+export function extractOrt(adresse: string): string {
+  if (!adresse) return "";
+  const parts = adresse
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  // Prefer the segment that contains a 4–5 digit postal code ("55116 Mainz").
+  const withPlz = parts.find((p) => /\b\d{4,5}\b/.test(p));
+  const seg = withPlz ?? parts[parts.length - 1] ?? "";
+  // Drop the postal code and any country suffix, keep the city.
+  return seg
+    .replace(/\b\d{4,5}\b/g, "")
+    .replace(/\b(deutschland|germany|österreich|schweiz)\b/gi, "")
+    .trim();
+}
+
+/** 5-digit German postal code from an address, or "". */
+export function extractPlz(adresse: string): string {
+  const m = (adresse || "").match(/\b(\d{5})\b/);
+  return m ? m[1] : "";
+}
+
+/** Postal-code prefixes counted as "home turf" (Mainz/Wiesbaden/Rhein-Main). */
+const LOCAL_PLZ_PREFIXES = ["55", "65", "60", "61", "63"];
+
+/** Home-turf lead ("Heimvorteil") — Mainz/Wiesbaden + Rhein-Main area. */
+export function isLocalRegion(adresse: string): boolean {
+  const plz = extractPlz(adresse);
+  if (plz && LOCAL_PLZ_PREFIXES.includes(plz.slice(0, 2))) return true;
+  return /\b(mainz|wiesbaden)\b/i.test(adresse || "");
+}
+
 /** Format an integer EUR amount as "9.999 €" (de-DE). */
 export function formatEur(value: number): string {
   return new Intl.NumberFormat("de-DE", {

@@ -5,6 +5,7 @@ import { activeTenant } from "@/lib/tenants";
 const LOGIN_TAB = "LoginLog";
 const ACTIVITY_TAB = "ActivityLog";
 const CALL_TAB = "CallLog";
+const FOLLOWUP_TAB = "Wiedervorlage";
 
 function sheetsClient(): sheets_v4.Sheets {
   return google.sheets({
@@ -259,4 +260,72 @@ export async function getWeeklyStats(): Promise<{
     prevWeekEnd: prev.end,
     byUser,
   };
+}
+
+/**
+ * Set/clear a Wiedervorlage (follow-up) for a lead. Append-only log; the latest
+ * row per domain wins on read. Best-effort; never throws to the caller.
+ */
+export async function setFollowUp(
+  email: string | null | undefined,
+  domain: string,
+  date: string,
+  note: string,
+): Promise<void> {
+  const dom = (domain ?? "").trim().toLowerCase();
+  if (!dom) return;
+  try {
+    const sheets = sheetsClient();
+    const id = activeTenant().sheetId;
+    await ensureTab(sheets, id, FOLLOWUP_TAB, [
+      "timestamp",
+      "domain",
+      "date",
+      "note",
+      "email",
+    ]);
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: id,
+      range: `${FOLLOWUP_TAB}!A2:E`,
+      valueInputOption: "RAW",
+      insertDataOption: "INSERT_ROWS",
+      requestBody: {
+        values: [
+          [
+            new Date().toISOString(),
+            dom,
+            (date ?? "").trim(),
+            (note ?? "").trim(),
+            (email ?? "").trim().toLowerCase(),
+          ],
+        ],
+      },
+    });
+  } catch {
+    /* best-effort */
+  }
+}
+
+/** Current Wiedervorlage per domain (latest row wins). Best-effort. */
+export async function getFollowUps(): Promise<
+  Record<string, { date: string; note: string }>
+> {
+  const out: Record<string, { date: string; note: string }> = {};
+  try {
+    const sheets = sheetsClient();
+    const id = activeTenant().sheetId;
+    const rows = await readRange(sheets, id, `${FOLLOWUP_TAB}!A2:E`);
+    // Append-only log: later rows overwrite earlier ones for the same domain.
+    for (const r of rows) {
+      const dom = String(r[1] ?? "").trim().toLowerCase();
+      if (!dom) continue;
+      const date = String(r[2] ?? "").trim();
+      const note = String(r[3] ?? "").trim();
+      if (date) out[dom] = { date, note };
+      else delete out[dom]; // empty date = cleared
+    }
+  } catch {
+    /* return whatever we have */
+  }
+  return out;
 }
