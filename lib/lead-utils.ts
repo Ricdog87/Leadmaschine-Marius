@@ -56,7 +56,19 @@ export function extractRegion(adresse: string): string {
   return tail.replace(/\b\d{4,5}\b/g, "").trim();
 }
 
-/** City / Ort from a German address (segment carrying the postal code). */
+/** Real hyphenated German city names to keep intact (don't strip after "-"). */
+const HYPHENATED_CITIES = new Set([
+  "castrop-rauxel",
+  "ludwigshafen-oggersheim",
+]);
+
+/**
+ * Clean city / Ort from a German address.
+ * Handles Google's borough/Ortsteil formats, e.g.
+ *  "10961 Berlin-Bezirk Friedrichshain-Kreuzberg" → "Berlin"
+ *  "60437 Frankfurt am Main-Kalbach-Riedberg"      → "Frankfurt am Main"
+ *  "61389 Schmitten im Taunus-Oberreifenberg"      → "Schmitten im Taunus"
+ */
 export function extractOrt(adresse: string): string {
   if (!adresse) return "";
   const parts = adresse
@@ -65,12 +77,18 @@ export function extractOrt(adresse: string): string {
     .filter(Boolean);
   // Prefer the segment that contains a 4–5 digit postal code ("55116 Mainz").
   const withPlz = parts.find((p) => /\b\d{4,5}\b/.test(p));
-  const seg = withPlz ?? parts[parts.length - 1] ?? "";
-  // Drop the postal code and any country suffix, keep the city.
-  return seg
+  let seg = (withPlz ?? parts[parts.length - 1] ?? "")
     .replace(/\b\d{4,5}\b/g, "")
     .replace(/\b(deutschland|germany|österreich|schweiz)\b/gi, "")
     .trim();
+  // Drop Google "…-Bezirk X" / "…-Ortsteil X" suffixes ("Berlin-Bezirk Pankow" → "Berlin").
+  seg = seg.replace(/\s*-?\s*\b(bezirk|ortsteil)\b.*$/i, "").trim();
+  // Drop an Ortsteil appended after a hyphen ("Frankfurt am Main-Kalbach" →
+  // "Frankfurt am Main"), unless the whole name is a real hyphenated city.
+  if (seg.includes("-") && !HYPHENATED_CITIES.has(seg.toLowerCase())) {
+    seg = seg.slice(0, seg.indexOf("-")).trim();
+  }
+  return seg;
 }
 
 /** 5-digit German postal code from an address, or "". */
