@@ -35,6 +35,11 @@ export const TENANTS = {
         role: "Closer",
         short: "Marius",
       },
+      "google@hohrising.com": {
+        nickname: "Marius the Closer",
+        role: "Closer",
+        short: "Marius",
+      },
       "gmb.hohrising@gmail.com": {
         nickname: "Marvin the Setter",
         role: "Setter",
