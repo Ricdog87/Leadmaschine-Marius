@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { extractRegion } from "@/lib/lead-utils";
+import { extractRegion, extractOrt, isLocalRegion } from "@/lib/lead-utils";
 import { PRIOS, STATUSES, type Kpis, type Lead, type Status } from "@/lib/types";
 import type { UserProfile } from "@/lib/tenants";
 import { CallGoal } from "@/components/call-goal";
@@ -16,19 +16,29 @@ import {
 import { LeadList } from "@/components/lead-list";
 import { LeadDetail } from "@/components/lead-detail";
 
+/** Wiedervorlage (follow-up) for a lead — stored in a separate sheet tab. */
+export interface FollowUp {
+  date: string; // YYYY-MM-DD ("" = none)
+  note: string;
+}
+
 interface SalesDashboardProps {
   leads: Lead[];
   kpis: Kpis;
   users: Record<string, UserProfile>;
+  followUps?: Record<string, FollowUp>;
 }
 
 const FILTER_KEYS: FilterKey[] = [
   "branche",
   "region",
+  "ort",
+  "lokal",
   "welle",
   "akquiseform",
   "prio",
   "status",
+  "wiedervorlage",
 ];
 
 function uniqueSorted(values: string[]): string[] {
@@ -37,13 +47,28 @@ function uniqueSorted(values: string[]): string[] {
   );
 }
 
-export function SalesDashboard({ leads, kpis, users }: SalesDashboardProps) {
+/** Local YYYY-MM-DD — used to flag a Wiedervorlage as due (≤ today). */
+function todayYMD(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+    d.getDate(),
+  ).padStart(2, "0")}`;
+}
+
+export function SalesDashboard({
+  leads,
+  kpis,
+  users,
+  followUps = {},
+}: SalesDashboardProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
   const [selectedDomain, setSelectedDomain] = useState<string | null>(null);
   const [updatingDomain, setUpdatingDomain] = useState<string | null>(null);
+
+  const today = todayYMD();
 
   const active = useMemo(() => {
     const out = {} as Record<FilterKey, string[]>;
@@ -54,22 +79,56 @@ export function SalesDashboard({ leads, kpis, users }: SalesDashboardProps) {
     return out;
   }, [searchParams]);
 
-  const leadsWithRegion = useMemo(
-    () => leads.map((l) => ({ lead: l, region: extractRegion(l.adresse) })),
-    [leads],
+  const leadsWithGeo = useMemo(
+    () =>
+      leads.map((l) => {
+        const fu = followUps[l.domain];
+        return {
+          lead: l,
+          region: extractRegion(l.adresse),
+          ort: extractOrt(l.adresse),
+          local: isLocalRegion(l.adresse),
+          due: Boolean(fu && fu.date && fu.date <= today),
+        };
+      }),
+    [leads, followUps, today],
   );
+
+  // Ort filter chips: cities with ≥2 leads, most frequent first (cap 24).
+  const ortOptions = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const { ort } of leadsWithGeo) {
+      if (!ort) continue;
+      counts.set(ort, (counts.get(ort) ?? 0) + 1);
+    }
+    return Array.from(counts.entries())
+      .filter(([, n]) => n >= 2)
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "de"))
+      .slice(0, 24)
+      .map(([ort]) => ort);
+  }, [leadsWithGeo]);
+
+  const hasLocal = useMemo(() => leadsWithGeo.some((l) => l.local), [leadsWithGeo]);
+  const hasDue = useMemo(() => leadsWithGeo.some((l) => l.due), [leadsWithGeo]);
 
   const groups: FilterGroup[] = useMemo(
     () => [
+      { key: "lokal", label: "Lokal", options: hasLocal ? ["Rhein-Main"] : [] },
+      {
+        key: "wiedervorlage",
+        label: "WV",
+        options: hasDue ? ["Fällig"] : [],
+      },
       {
         key: "branche",
         label: "Branche",
         options: uniqueSorted(leads.map((l) => l.branche)),
       },
+      { key: "ort", label: "Ort", options: ortOptions },
       {
         key: "region",
-        label: "Region",
-        options: uniqueSorted(leadsWithRegion.map((l) => l.region)),
+        label: "Land",
+        options: uniqueSorted(leadsWithGeo.map((l) => l.region)),
       },
       {
         key: "welle",
@@ -84,16 +143,19 @@ export function SalesDashboard({ leads, kpis, users }: SalesDashboardProps) {
       { key: "prio", label: "Prio", options: [...PRIOS] },
       { key: "status", label: "Status", options: [...STATUSES] },
     ],
-    [leads, leadsWithRegion],
+    [leads, leadsWithGeo, ortOptions, hasLocal, hasDue],
   );
 
   const filtered = useMemo(() => {
-    return leadsWithRegion
-      .filter(({ lead, region }) => {
+    return leadsWithGeo
+      .filter(({ lead, region, ort, local, due }) => {
         if (active.branche.length && !active.branche.includes(lead.branche))
           return false;
         if (active.region.length && !active.region.includes(region))
           return false;
+        if (active.ort.length && !active.ort.includes(ort)) return false;
+        if (active.lokal.length && !local) return false;
+        if (active.wiedervorlage.length && !due) return false;
         if (active.welle.length && !active.welle.includes(lead.welle))
           return false;
         if (
@@ -108,10 +170,10 @@ export function SalesDashboard({ leads, kpis, users }: SalesDashboardProps) {
         return true;
       })
       .map(({ lead }) => lead);
-  }, [leadsWithRegion, active]);
+  }, [leadsWithGeo, active]);
 
-  const selected =
-    leads.find((l) => l.domain === selectedDomain) ?? null;
+  const selected = leads.find((l) => l.domain === selectedDomain) ?? null;
+  const selectedFollowUp = selected ? followUps[selected.domain] : undefined;
 
   // Newest run date present in the data — used to flag fresh leads.
   const freshDate = useMemo(
@@ -167,6 +229,26 @@ export function SalesDashboard({ leads, kpis, users }: SalesDashboardProps) {
     }
   }
 
+  async function setFollowUp(lead: Lead, date: string, note: string) {
+    setUpdatingDomain(lead.domain);
+    try {
+      const res = await fetch(`/api/leads/${encodeURIComponent(lead.domain)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ wiedervorlage: date, note }),
+      });
+      if (!res.ok) {
+        throw new Error("Wiedervorlage konnte nicht gespeichert werden");
+      }
+      toast.success(date ? `Wiedervorlage → ${date}` : "Wiedervorlage entfernt");
+      startTransition(() => router.refresh());
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Fehler");
+    } finally {
+      setUpdatingDomain(null);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <CallGoal users={users} />
@@ -182,12 +264,16 @@ export function SalesDashboard({ leads, kpis, users }: SalesDashboardProps) {
           leads={filtered}
           selectedDomain={selectedDomain}
           freshDate={freshDate}
+          followUps={followUps}
+          today={today}
           onSelect={(lead) => setSelectedDomain(lead.domain)}
         />
         <LeadDetail
           lead={selected}
           pending={isPending || updatingDomain === selected?.domain}
+          followUp={selectedFollowUp}
           onStatusChange={changeStatus}
+          onSetFollowUp={setFollowUp}
         />
       </div>
     </div>

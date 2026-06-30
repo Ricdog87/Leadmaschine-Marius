@@ -5,10 +5,13 @@ import { cn } from "@/lib/utils";
 export type FilterKey =
   | "branche"
   | "region"
+  | "ort"
+  | "lokal"
   | "welle"
   | "akquiseform"
   | "prio"
-  | "status";
+  | "status"
+  | "wiedervorlage";
 
 export interface FilterGroup {
   key: FilterKey;

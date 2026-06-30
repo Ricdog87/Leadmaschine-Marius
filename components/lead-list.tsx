@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo } from "react";
+import { MapPinIcon, CalendarClockIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { prioClasses } from "@/lib/lead-utils";
+import { prioClasses, extractOrt } from "@/lib/lead-utils";
 import { PRIO_RANK } from "@/lib/lead-utils";
 import type { Lead } from "@/lib/types";
 
@@ -12,6 +13,10 @@ interface LeadListProps {
   onSelect: (lead: Lead) => void;
   /** Newest run date in the dataset — leads with this date are flagged "NEU". */
   freshDate?: string;
+  /** Follow-up dates per domain (Wiedervorlage). */
+  followUps?: Record<string, { date: string; note: string }>;
+  /** Local YYYY-MM-DD — a follow-up on or before today is "due". */
+  today?: string;
 }
 
 function Dot({ on, label }: { on: boolean; label: string }) {
@@ -40,6 +45,8 @@ export function LeadList({
   selectedDomain,
   onSelect,
   freshDate,
+  followUps,
+  today,
 }: LeadListProps) {
   const sorted = useMemo(() => {
     return [...leads].sort((a, b) => {
@@ -65,6 +72,9 @@ export function LeadList({
       {sorted.map((lead, i) => {
         const active = lead.domain === selectedDomain;
         const isFresh = Boolean(freshDate) && lead.datum === freshDate;
+        const ort = extractOrt(lead.adresse);
+        const fu = followUps?.[lead.domain];
+        const due = Boolean(fu?.date && today && fu.date <= today);
         return (
           <button
             key={lead.domain}
@@ -96,6 +106,20 @@ export function LeadList({
                     NEU
                   </span>
                 )}
+                {fu?.date && (
+                  <span
+                    title={`Wiedervorlage ${fu.date}${fu.note ? " · " + fu.note : ""}`}
+                    className={cn(
+                      "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold",
+                      due
+                        ? "border-rsg-warn/50 bg-rsg-warn/15 text-rsg-warn"
+                        : "border-rsg-border bg-rsg-surface2 text-rsg-muted2",
+                    )}
+                  >
+                    <CalendarClockIcon className="size-3" />
+                    {fu.date.slice(8, 10)}.{fu.date.slice(5, 7)}.
+                  </span>
+                )}
                 <span
                   className={cn(
                     "rounded-full border px-2 py-0.5 text-[10px] font-semibold",
@@ -106,10 +130,16 @@ export function LeadList({
                 </span>
               </div>
             </div>
-            <div className="mt-2.5 flex items-center gap-3">
+            <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1">
               <span className="font-mono text-[10px] uppercase tracking-wider text-rsg-muted2">
                 {lead.branche || "—"}
               </span>
+              {ort && (
+                <span className="inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider text-rsg-muted2">
+                  <MapPinIcon className="size-3" />
+                  {ort}
+                </span>
+              )}
               <span className="font-mono text-[10px] uppercase tracking-wider text-rsg-muted2">
                 SEO{" "}
                 <span className="text-rsg-text">{Math.round(lead.seo_score)}</span>

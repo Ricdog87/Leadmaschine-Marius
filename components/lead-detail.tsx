@@ -1,6 +1,13 @@
 "use client";
 
-import { MailIcon, MapPinIcon, PhoneIcon, StarIcon } from "lucide-react";
+import { useState } from "react";
+import {
+  CalendarClockIcon,
+  MailIcon,
+  MapPinIcon,
+  PhoneIcon,
+  StarIcon,
+} from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { formatEur, prioClasses } from "@/lib/lead-utils";
@@ -9,10 +16,84 @@ import { ScoreRing } from "@/components/score-ring";
 import { PitchCard } from "@/components/pitch-card";
 import { StatusPill } from "@/components/status-pill";
 
+interface FollowUp {
+  date: string;
+  note: string;
+}
+
 interface LeadDetailProps {
   lead: Lead | null;
   pending: boolean;
+  followUp?: FollowUp;
   onStatusChange: (lead: Lead, status: Status) => void;
+  onSetFollowUp: (lead: Lead, date: string, note: string) => void;
+}
+
+/** Wiedervorlage editor — date + optional note. Remounted per lead via `key`. */
+function FollowUpEditor({
+  lead,
+  followUp,
+  pending,
+  onSave,
+}: {
+  lead: Lead;
+  followUp?: FollowUp;
+  pending: boolean;
+  onSave: (lead: Lead, date: string, note: string) => void;
+}) {
+  const [date, setDate] = useState(followUp?.date ?? "");
+  const [note, setNote] = useState(followUp?.note ?? "");
+  return (
+    <div className="rounded-xl border border-rsg-border bg-rsg-surface p-5">
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="font-mono text-[11px] uppercase tracking-[0.18em] text-rsg-muted2">
+          Wiedervorlage
+        </h3>
+        {followUp?.date && (
+          <span className="inline-flex items-center gap-1 font-mono text-[10px] text-rsg-warn">
+            <CalendarClockIcon className="size-3" />
+            aktiv: {followUp.date}
+          </span>
+        )}
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          className="rounded-lg border border-rsg-border bg-rsg-surface2 px-3 py-2 text-sm text-rsg-text outline-none focus:border-rsg-accent/50"
+        />
+        <input
+          type="text"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="Notiz (optional)"
+          className="min-w-0 flex-1 rounded-lg border border-rsg-border bg-rsg-surface2 px-3 py-2 text-sm text-rsg-text outline-none placeholder:text-rsg-muted2 focus:border-rsg-accent/50"
+        />
+        <button
+          type="button"
+          disabled={pending || !date}
+          onClick={() => onSave(lead, date, note)}
+          className="inline-flex items-center gap-2 rounded-lg border border-rsg-accent/40 bg-rsg-accent/10 px-3 py-2 text-sm font-semibold text-rsg-accent transition hover:bg-rsg-accent/20 disabled:opacity-40"
+        >
+          <CalendarClockIcon className="size-4" /> Setzen
+        </button>
+        {followUp?.date && (
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => onSave(lead, "", "")}
+            className="rounded-lg border border-rsg-border px-3 py-2 text-sm text-rsg-muted2 transition hover:text-rsg-danger disabled:opacity-40"
+          >
+            Entfernen
+          </button>
+        )}
+      </div>
+      <p className="mt-2 font-mono text-[10px] text-rsg-muted2">
+        Plane den nächsten Anruf — er erscheint dann im Filter WV · Fällig.
+      </p>
+    </div>
+  );
 }
 
 function StatCard({
@@ -53,7 +134,13 @@ function logCall() {
 }
 
 /** Sticky detail panel for the selected lead. */
-export function LeadDetail({ lead, pending, onStatusChange }: LeadDetailProps) {
+export function LeadDetail({
+  lead,
+  pending,
+  followUp,
+  onStatusChange,
+  onSetFollowUp,
+}: LeadDetailProps) {
   if (!lead) {
     return (
       <div className="flex min-h-64 items-center justify-center rounded-xl border border-rsg-border bg-rsg-surface p-8 text-center text-sm text-rsg-muted lg:sticky lg:top-4">
@@ -250,6 +337,15 @@ export function LeadDetail({ lead, pending, onStatusChange }: LeadDetailProps) {
           ))}
         </div>
       </div>
+
+      {/* Wiedervorlage (follow-up) */}
+      <FollowUpEditor
+        key={lead.domain}
+        lead={lead}
+        followUp={followUp}
+        pending={pending}
+        onSave={onSetFollowUp}
+      />
     </div>
   );
 }
