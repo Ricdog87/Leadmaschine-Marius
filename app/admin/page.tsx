@@ -19,6 +19,8 @@ const CALL_GOAL = 15;
 const STATUS_TONE: Record<Status, string> = {
   Neu: "var(--color-rsg-muted)",
   Kontaktiert: "var(--color-rsg-accent)",
+  "Nummer weitergegeben": "var(--color-rsg-accent)",
+  "Mail geschickt": "var(--color-rsg-warn)",
   Termin: "var(--color-rsg-accent)",
   Angebot: "var(--color-rsg-warn)",
   Gewonnen: "var(--color-rsg-ok)",
