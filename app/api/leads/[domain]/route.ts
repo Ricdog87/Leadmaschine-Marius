@@ -1,7 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/auth";
 import { updateLeadStatus } from "@/lib/sheets";
-import { logActivity, setFollowUp } from "@/lib/tracking";
+import {
+  logActivity,
+  setFollowUp,
+  setNote,
+  logLeadCall,
+} from "@/lib/tracking";
 import { STATUSES, type Status } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -51,7 +56,7 @@ export async function PATCH(
   }
 }
 
-/** Set or clear a Wiedervorlage (follow-up date) for a lead. */
+/** Per-lead mutations: Anruf-Log ({call:true}), Notiz ({notiz}), or Wiedervorlage ({wiedervorlage}). */
 export async function POST(
   req: NextRequest,
   ctx: RouteContext<"/api/leads/[domain]">,
@@ -62,6 +67,8 @@ export async function POST(
   }
 
   const { domain } = await ctx.params;
+  const email = session.user.email;
+  const dom = decodeURIComponent(domain);
 
   let body: unknown;
   try {
@@ -70,22 +77,26 @@ export async function POST(
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const raw = (body as { wiedervorlage?: unknown })?.wiedervorlage;
-  const noteRaw = (body as { note?: unknown })?.note;
-  const date = typeof raw === "string" ? raw.trim() : "";
-  // Allow empty (= clear) or a strict YYYY-MM-DD date.
-  if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    return NextResponse.json({ error: "Invalid date" }, { status: 400 });
-  }
+  const b = body as {
+    call?: unknown;
+    notiz?: unknown;
+    wiedervorlage?: unknown;
+    note?: unknown;
+  };
 
   try {
-    const dom = decodeURIComponent(domain);
-    await setFollowUp(
-      session.user.email,
-      dom,
-      date,
-      typeof noteRaw === "string" ? noteRaw : "",
-    );
+    if (b.call === true) {
+      await logLeadCall(email, dom);
+    } else if (typeof b.notiz === "string") {
+      await setNote(email, dom, b.notiz);
+    } else {
+      const date =
+        typeof b.wiedervorlage === "string" ? b.wiedervorlage.trim() : "";
+      if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        return NextResponse.json({ error: "Invalid date" }, { status: 400 });
+      }
+      await setFollowUp(email, dom, date, typeof b.note === "string" ? b.note : "");
+    }
     return NextResponse.json({ ok: true });
   } catch (err) {
     return NextResponse.json(
