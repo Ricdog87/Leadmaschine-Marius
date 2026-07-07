@@ -6,6 +6,8 @@ const LOGIN_TAB = "LoginLog";
 const ACTIVITY_TAB = "ActivityLog";
 const CALL_TAB = "CallLog";
 const FOLLOWUP_TAB = "Wiedervorlage";
+const NOTES_TAB = "Notizen";
+const CALLS_LEAD_TAB = "AnrufeLead";
 
 function sheetsClient(): sheets_v4.Sheets {
   return google.sheets({
@@ -323,6 +325,119 @@ export async function getFollowUps(): Promise<
       const note = String(r[3] ?? "").trim();
       if (date) out[dom] = { date, note };
       else delete out[dom]; // empty date = cleared
+    }
+  } catch {
+    /* return whatever we have */
+  }
+  return out;
+}
+
+/** Save/clear a free note for a lead (append-only, latest wins). Best-effort. */
+export async function setNote(
+  email: string | null | undefined,
+  domain: string,
+  note: string,
+): Promise<void> {
+  const dom = (domain ?? "").trim().toLowerCase();
+  if (!dom) return;
+  try {
+    const sheets = sheetsClient();
+    const id = activeTenant().sheetId;
+    await ensureTab(sheets, id, NOTES_TAB, [
+      "timestamp",
+      "domain",
+      "note",
+      "email",
+    ]);
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: id,
+      range: `${NOTES_TAB}!A2:D`,
+      valueInputOption: "RAW",
+      insertDataOption: "INSERT_ROWS",
+      requestBody: {
+        values: [
+          [
+            new Date().toISOString(),
+            dom,
+            (note ?? "").trim(),
+            (email ?? "").trim().toLowerCase(),
+          ],
+        ],
+      },
+    });
+  } catch {
+    /* best-effort */
+  }
+}
+
+/** Current free note per domain (latest row wins). Best-effort. */
+export async function getNotes(): Promise<Record<string, { note: string }>> {
+  const out: Record<string, { note: string }> = {};
+  try {
+    const sheets = sheetsClient();
+    const id = activeTenant().sheetId;
+    const rows = await readRange(sheets, id, `${NOTES_TAB}!A2:D`);
+    for (const r of rows) {
+      const dom = String(r[1] ?? "").trim().toLowerCase();
+      if (!dom) continue;
+      const note = String(r[2] ?? "").trim();
+      if (note) out[dom] = { note };
+      else delete out[dom];
+    }
+  } catch {
+    /* return whatever we have */
+  }
+  return out;
+}
+
+/** Record a call made on a lead (per-lead call log). Best-effort. */
+export async function logLeadCall(
+  email: string | null | undefined,
+  domain: string,
+): Promise<void> {
+  const dom = (domain ?? "").trim().toLowerCase();
+  if (!dom) return;
+  try {
+    const sheets = sheetsClient();
+    const id = activeTenant().sheetId;
+    await ensureTab(sheets, id, CALLS_LEAD_TAB, [
+      "timestamp",
+      "domain",
+      "email",
+    ]);
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: id,
+      range: `${CALLS_LEAD_TAB}!A2:C`,
+      valueInputOption: "RAW",
+      insertDataOption: "INSERT_ROWS",
+      requestBody: {
+        values: [
+          [new Date().toISOString(), dom, (email ?? "").trim().toLowerCase()],
+        ],
+      },
+    });
+  } catch {
+    /* best-effort */
+  }
+}
+
+/** Calls per domain (count + latest timestamp). Best-effort. */
+export async function getCalledDomains(): Promise<
+  Record<string, { count: number; last: string }>
+> {
+  const out: Record<string, { count: number; last: string }> = {};
+  try {
+    const sheets = sheetsClient();
+    const id = activeTenant().sheetId;
+    const rows = await readRange(sheets, id, `${CALLS_LEAD_TAB}!A2:C`);
+    for (const r of rows) {
+      const ts = String(r[0] ?? "").trim();
+      const dom = String(r[1] ?? "").trim().toLowerCase();
+      if (!dom) continue;
+      const cur = out[dom] ?? { count: 0, last: "" };
+      cur.count += 1;
+      if (ts > cur.last) cur.last = ts;
+      out[dom] = cur;
     }
   } catch {
     /* return whatever we have */

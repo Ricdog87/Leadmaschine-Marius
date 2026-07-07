@@ -1,6 +1,8 @@
 export type Status =
   | "Neu"
   | "Kontaktiert"
+  | "Nummer weitergegeben"
+  | "Mail geschickt"
   | "Termin"
   | "Angebot"
   | "Gewonnen"
@@ -9,6 +11,8 @@ export type Status =
 export const STATUSES: Status[] = [
   "Neu",
   "Kontaktiert",
+  "Nummer weitergegeben",
+  "Mail geschickt",
   "Termin",
   "Angebot",
   "Gewonnen",

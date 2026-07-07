@@ -40,6 +40,10 @@ export function statusClasses(status: Status, active: boolean): string {
     case "Termin":
     case "Angebot":
       return "border-rsg-accent/50 bg-rsg-accent/15 text-rsg-accent";
+    case "Nummer weitergegeben":
+      return "border-rsg-accent/40 bg-rsg-accent/10 text-rsg-accent";
+    case "Mail geschickt":
+      return "border-rsg-warn/50 bg-rsg-warn/15 text-rsg-warn";
     default:
       return "border-rsg-text/30 bg-rsg-text/10 text-rsg-text";
   }
