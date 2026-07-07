@@ -17,6 +17,8 @@ interface LeadListProps {
   followUps?: Record<string, { date: string; note: string }>;
   /** Local YYYY-MM-DD — a follow-up on or before today is "due". */
   today?: string;
+  /** Domains already called (per-lead call log). */
+  calledLeads?: Record<string, { count: number; last: string }>;
 }
 
 function Dot({ on, label }: { on: boolean; label: string }) {
@@ -47,6 +49,7 @@ export function LeadList({
   freshDate,
   followUps,
   today,
+  calledLeads,
 }: LeadListProps) {
   const sorted = useMemo(() => {
     return [...leads].sort((a, b) => {
@@ -75,6 +78,7 @@ export function LeadList({
         const ort = extractOrt(lead.adresse);
         const fu = followUps?.[lead.domain];
         const due = Boolean(fu?.date && today && fu.date <= today);
+        const called = calledLeads?.[lead.domain];
         return (
           <button
             key={lead.domain}
@@ -100,6 +104,12 @@ export function LeadList({
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-1.5">
+                {called && (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-rsg-ok/50 bg-rsg-ok/15 px-2 py-0.5 text-[10px] font-semibold text-rsg-ok">
+                    <span className="size-1 rounded-full bg-rsg-ok" />
+                    ANGERUFEN
+                  </span>
+                )}
                 {isFresh && (
                   <span className="inline-flex items-center gap-1 rounded-full border border-rsg-accent/50 bg-rsg-accent/15 px-2 py-0.5 text-[10px] font-semibold text-rsg-accent">
                     <span className="size-1 rounded-full bg-rsg-accent" />

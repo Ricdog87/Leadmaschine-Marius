@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
+import { SearchIcon, XIcon } from "lucide-react";
 import { extractRegion, extractOrt, isLocalRegion } from "@/lib/lead-utils";
 import { PRIOS, STATUSES, type Kpis, type Lead, type Status } from "@/lib/types";
 import type { UserProfile } from "@/lib/tenants";
@@ -27,6 +28,8 @@ interface SalesDashboardProps {
   kpis: Kpis;
   users: Record<string, UserProfile>;
   followUps?: Record<string, FollowUp>;
+  notes?: Record<string, { note: string }>;
+  calledLeads?: Record<string, { count: number; last: string }>;
 }
 
 const FILTER_KEYS: FilterKey[] = [
@@ -60,6 +63,8 @@ export function SalesDashboard({
   kpis,
   users,
   followUps = {},
+  notes = {},
+  calledLeads = {},
 }: SalesDashboardProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -67,6 +72,7 @@ export function SalesDashboard({
   const [isPending, startTransition] = useTransition();
   const [selectedDomain, setSelectedDomain] = useState<string | null>(null);
   const [updatingDomain, setUpdatingDomain] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
 
   const today = todayYMD();
 
@@ -147,8 +153,14 @@ export function SalesDashboard({
   );
 
   const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
     return leadsWithGeo
       .filter(({ lead, region, ort, local, due }) => {
+        if (
+          q &&
+          !`${lead.firma} ${lead.domain} ${ort}`.toLowerCase().includes(q)
+        )
+          return false;
         if (active.branche.length && !active.branche.includes(lead.branche))
           return false;
         if (active.region.length && !active.region.includes(region))
@@ -170,7 +182,7 @@ export function SalesDashboard({
         return true;
       })
       .map(({ lead }) => lead);
-  }, [leadsWithGeo, active]);
+  }, [leadsWithGeo, active, query]);
 
   const selected = leads.find((l) => l.domain === selectedDomain) ?? null;
   const selectedFollowUp = selected ? followUps[selected.domain] : undefined;
@@ -249,10 +261,61 @@ export function SalesDashboard({
     }
   }
 
+  async function setNote(lead: Lead, note: string) {
+    setUpdatingDomain(lead.domain);
+    try {
+      const res = await fetch(`/api/leads/${encodeURIComponent(lead.domain)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notiz: note }),
+      });
+      if (!res.ok) throw new Error("Notiz konnte nicht gespeichert werden");
+      toast.success("Notiz gespeichert");
+      startTransition(() => router.refresh());
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Fehler");
+    } finally {
+      setUpdatingDomain(null);
+    }
+  }
+
+  async function logCallLead(lead: Lead) {
+    try {
+      await fetch(`/api/leads/${encodeURIComponent(lead.domain)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ call: true }),
+      });
+      startTransition(() => router.refresh());
+    } catch {
+      /* daily counter already recorded via the window event; ignore */
+    }
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <CallGoal users={users} />
       <KpiStrip kpis={kpis} total={leads.length} />
+      <div className="relative">
+        <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-rsg-muted2" />
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Lead suchen (Firma, Domain, Ort)…"
+          className="w-full rounded-xl border border-rsg-border bg-rsg-surface py-2.5 pl-9 pr-9 text-sm text-rsg-text outline-none placeholder:text-rsg-muted2 focus:border-rsg-accent/50"
+        />
+        {query && (
+          <button
+            type="button"
+            onClick={() => setQuery("")}
+            aria-label="Suche löschen"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-rsg-muted2 transition hover:text-rsg-text"
+          >
+            <XIcon className="size-4" />
+          </button>
+        )}
+      </div>
       <Filters
         groups={groups}
         active={active}
@@ -265,6 +328,7 @@ export function SalesDashboard({
           selectedDomain={selectedDomain}
           freshDate={freshDate}
           followUps={followUps}
+          calledLeads={calledLeads}
           today={today}
           onSelect={(lead) => setSelectedDomain(lead.domain)}
         />
@@ -272,8 +336,12 @@ export function SalesDashboard({
           lead={selected}
           pending={isPending || updatingDomain === selected?.domain}
           followUp={selectedFollowUp}
+          note={selected ? notes[selected.domain]?.note ?? "" : ""}
+          called={selected ? calledLeads[selected.domain] : undefined}
           onStatusChange={changeStatus}
           onSetFollowUp={setFollowUp}
+          onSetNote={setNote}
+          onCall={logCallLead}
         />
       </div>
     </div>

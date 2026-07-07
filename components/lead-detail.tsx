@@ -25,8 +25,50 @@ interface LeadDetailProps {
   lead: Lead | null;
   pending: boolean;
   followUp?: FollowUp;
+  note?: string;
+  called?: { count: number; last: string };
   onStatusChange: (lead: Lead, status: Status) => void;
   onSetFollowUp: (lead: Lead, date: string, note: string) => void;
+  onSetNote: (lead: Lead, note: string) => void;
+  onCall: (lead: Lead) => void;
+}
+
+/** Freies Notizfeld pro Lead (Ansprechpartner, Pitch). Remounted per lead via `key`. */
+function NotesEditor({
+  lead,
+  note,
+  pending,
+  onSave,
+}: {
+  lead: Lead;
+  note?: string;
+  pending: boolean;
+  onSave: (lead: Lead, note: string) => void;
+}) {
+  const [value, setValue] = useState(note ?? "");
+  const dirty = value.trim() !== (note ?? "").trim();
+  return (
+    <div className="rounded-xl border border-rsg-border bg-rsg-surface p-5">
+      <h3 className="mb-3 font-mono text-[11px] uppercase tracking-[0.18em] text-rsg-muted2">
+        Notizen · Ansprechpartner, Pitch
+      </h3>
+      <textarea
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        rows={4}
+        placeholder="z. B. Ansprechpartner, Durchwahl, Gesprächsnotizen, besserer Pitch…"
+        className="w-full resize-y rounded-lg border border-rsg-border bg-rsg-surface2 px-3 py-2 text-sm text-rsg-text outline-none placeholder:text-rsg-muted2 focus:border-rsg-accent/50"
+      />
+      <button
+        type="button"
+        disabled={pending || !dirty}
+        onClick={() => onSave(lead, value)}
+        className="mt-2 inline-flex items-center gap-2 rounded-lg border border-rsg-accent/40 bg-rsg-accent/10 px-3 py-2 text-sm font-semibold text-rsg-accent transition hover:bg-rsg-accent/20 disabled:opacity-40"
+      >
+        Speichern
+      </button>
+    </div>
+  );
 }
 
 /** Wiedervorlage editor — date + optional note. Remounted per lead via `key`. */
@@ -138,8 +180,12 @@ export function LeadDetail({
   lead,
   pending,
   followUp,
+  note,
+  called,
   onStatusChange,
   onSetFollowUp,
+  onSetNote,
+  onCall,
 }: LeadDetailProps) {
   if (!lead) {
     return (
@@ -261,11 +307,20 @@ export function LeadDetail({
           </div>
         )}
 
-        {/* Log a call toward the daily goal */}
+        {/* Bereits angerufen? */}
+        {called && (
+          <div className="mt-4 flex items-center gap-2 rounded-xl border border-rsg-ok/40 bg-rsg-ok/10 px-3 py-2 text-sm font-semibold text-rsg-ok">
+            <PhoneIcon className="size-4" /> Schon angerufen · {called.count}×
+          </div>
+        )}
+        {/* Log a call — daily goal + per-lead */}
         <button
           type="button"
-          onClick={logCall}
-          className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-rsg-accent/40 bg-rsg-accent/10 px-4 py-2.5 font-display text-sm font-semibold text-rsg-accent transition hover:bg-rsg-accent/20 active:scale-[0.98]"
+          onClick={() => {
+            logCall();
+            onCall(lead);
+          }}
+          className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-rsg-accent/40 bg-rsg-accent/10 px-4 py-2.5 font-display text-sm font-semibold text-rsg-accent transition hover:bg-rsg-accent/20 active:scale-[0.98]"
         >
           <PhoneIcon className="size-4" /> Anruf geführt
         </button>
@@ -345,6 +400,15 @@ export function LeadDetail({
         followUp={followUp}
         pending={pending}
         onSave={onSetFollowUp}
+      />
+
+      {/* Notizen (Ansprechpartner, Pitch) */}
+      <NotesEditor
+        key={`note-${lead.domain}`}
+        lead={lead}
+        note={note}
+        pending={pending}
+        onSave={onSetNote}
       />
     </div>
   );
