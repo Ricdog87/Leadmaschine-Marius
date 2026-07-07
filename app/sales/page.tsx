@@ -1,6 +1,6 @@
 import { getAllLeads, getKpis } from "@/lib/sheets";
 import { tenantUsers } from "@/lib/tenants";
-import { getFollowUps } from "@/lib/tracking";
+import { getFollowUps, getNotes, getCalledDomains } from "@/lib/tracking";
 import { SalesDashboard } from "@/components/sales-dashboard";
 
 // Always render against fresh sheet data (status writes must reflect quickly).
@@ -25,13 +25,19 @@ export default async function SalesPage() {
   }
 
   const kpis = await getKpis(leads);
-  const followUps = await getFollowUps();
+  const [followUps, notes, calledLeads] = await Promise.all([
+    getFollowUps(),
+    getNotes(),
+    getCalledDomains(),
+  ]);
   return (
     <SalesDashboard
       leads={leads}
       kpis={kpis}
       users={tenantUsers()}
       followUps={followUps}
+      notes={notes}
+      calledLeads={calledLeads}
     />
   );
 }
