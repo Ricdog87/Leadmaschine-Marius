@@ -52,7 +52,12 @@ export function LeadList({
   calledLeads,
 }: LeadListProps) {
   const sorted = useMemo(() => {
+    // Solar/PV first — priorisierte Zielgruppe (Solateure), danach frische Leads.
+    const solarRank = (l: Lead) =>
+      /solar|photovolt/i.test(`${l.branche} ${l.branche_kategorie}`) ? 0 : 1;
     return [...leads].sort((a, b) => {
+      const bySolar = solarRank(a) - solarRank(b);
+      if (bySolar !== 0) return bySolar;
       const aFresh = freshDate && a.datum === freshDate ? 0 : 1;
       const bFresh = freshDate && b.datum === freshDate ? 0 : 1;
       if (aFresh !== bFresh) return aFresh - bFresh;
